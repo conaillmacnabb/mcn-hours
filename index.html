@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MCN Hours">
+  <meta name="theme-color" content="#2d3530">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <title>MCN Hours</title>
+  <style>
+    /* ── Reset & Variables ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary:    #c9a84c;
+      --primary-dk: #b8923d;
+      --header-bg:  #2d3530;
+      --green:   #16a34a;
+      --amber:   #d97706;
+      --red:     #dc2626;
+      --bg:      #f5f5f5;
+      --surface: #ffffff;
+      --border:  #e2e8f0;
+      --text:    #1a1a1a;
+      --muted:   #64748b;
+      --radius:  12px;
+      --shadow:  0 1px 3px rgba(0,0,0,.10), 0 1px 2px rgba(0,0,0,.06);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bot: env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 16px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ── Layout ── */
+    #app { display: flex; flex-direction: column; min-height: 100%; }
+
+    header {
+      background: var(--header-bg);
+      color: #fff;
+      padding: calc(12px + var(--safe-top)) 16px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,.35);
+    }
+    .header-brand { display: flex; align-items: center; gap: 10px; }
+    .header-logo  { height: 36px; width: auto; display: block; }
+    header h1 { font-size: 1.05rem; font-weight: 800; letter-spacing: .5px; color: #fff; text-transform: uppercase; }
+    header .view-toggle { display: flex; gap: 4px; }
+    .view-btn {
+      padding: 6px 14px;
+      border: 1.5px solid rgba(255,255,255,.4);
+      border-radius: 20px;
+      background: transparent;
+      color: rgba(255,255,255,.7);
+      font-size: .8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      font-family: inherit;
+    }
+    .view-btn.active { background: var(--primary); color: var(--header-bg); border-color: var(--primary); font-weight: 700; }
+
+    main { flex: 1; padding: 16px 16px calc(16px + var(--safe-bot)); max-width: 640px; width: 100%; margin: 0 auto; }
+
+    /* ── Cards & Sections ── */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 700;
+      font-size: .9rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: filter .15s, transform .1s;
+      min-height: 44px;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn-primary   { background: var(--primary);  color: #fff; }
+    .btn-primary:hover { filter: brightness(1.1); }
+    .btn-success   { background: var(--green); color: #fff; }
+    .btn-success:hover { filter: brightness(1.1); }
+    .btn-danger    { background: var(--red);   color: #fff; }
+    .btn-danger:hover { filter: brightness(1.1); }
+    .btn-outline   { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+    .btn-outline:hover { background: var(--bg); }
+    .btn-sm        { padding: 6px 12px; font-size: .8rem; min-height: 36px; }
+    .btn-icon      { padding: 8px; min-height: 36px; min-width: 36px; border-radius: 8px; background: var(--bg); border: none; cursor: pointer; color: var(--muted); font-size: 1rem; }
+    .btn-icon:hover { color: var(--text); }
+    .btn:disabled  { opacity: .45; cursor: not-allowed; transform: none; }
+
+    /* ── Forms ── */
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: .85rem; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+      font-family: inherit;
+      background: var(--surface);
+      color: var(--text);
+      transition: border-color .2s;
+      min-height: 44px;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(201,168,76,.15);
+    }
+    textarea { min-height: 80px; resize: vertical; }
+
+    /* ── Staff View ── */
+    #staff-selector {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    #staff-selector label { font-weight: 700; font-size: .9rem; display: block; margin-bottom: 8px; }
+
+    .client-card {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .client-card:last-child { border-bottom: none; }
+    .client-info { flex: 1; min-width: 0; }
+    .client-name { font-weight: 700; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .client-meta { font-size: .8rem; color: var(--muted); margin-top: 2px; }
+    .timer-display { font-size: 1rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--primary); min-width: 70px; text-align: center; }
+    .timer-btn { min-width: 80px; }
+
+    .limit-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: .75rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-top: 4px;
+    }
+    .badge-amber { background: #fef3c7; color: #92400e; }
+    .badge-red   { background: #fee2e2; color: #991b1b; }
+
+    /* ── Recent Entries ── */
+    .log-row {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .log-row:last-child { border-bottom: none; }
+    .log-info { flex: 1; min-width: 0; }
+    .log-client { font-weight: 700; font-size: .95rem; }
+    .log-time   { font-size: .8rem; color: var(--muted); margin-top: 2px; }
+    .log-hours  { font-weight: 700; font-size: .9rem; color: var(--primary); white-space: nowrap; }
+    .log-open   { color: var(--amber); }
+    .log-actions { display: flex; gap: 4px; margin-top: 4px; }
+
+    /* ── Owner: PIN Gate ── */
+    #pin-gate {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 24px;
+      gap: 16px;
+    }
+    #pin-gate h2 { font-size: 1.4rem; }
+    #pin-gate p  { color: var(--muted); text-align: center; }
+    #pin-input   { max-width: 200px; text-align: center; font-size: 1.5rem; letter-spacing: .5em; }
+    #pin-error   { color: var(--red); font-size: .85rem; min-height: 20px; }
+
+    /* ── Owner: Tabs ── */
+    .tab-bar {
+      display: flex;
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 12px 4px;
+      border: none;
+      background: transparent;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all .2s;
+      min-height: 48px;
+    }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    /* ── Dashboard ── */
+    .client-progress {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .client-progress:last-child { border-bottom: none; }
+    .progress-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+    .progress-name   { font-weight: 700; }
+    .progress-label  { font-size: .82rem; color: var(--muted); }
+    .progress-bar    { height: 10px; background: var(--bg); border-radius: 5px; overflow: hidden; }
+    .progress-fill   { height: 100%; border-radius: 5px; transition: width .4s ease; }
+    .fill-green { background: var(--green); }
+    .fill-amber { background: var(--amber); }
+    .fill-red   { background: var(--red);   }
+    .progress-footer { display: flex; justify-content: space-between; font-size: .78rem; color: var(--muted); margin-top: 4px; }
+
+    /* ── Owner tables ── */
+    .owner-list-item {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .owner-list-item:last-child { border-bottom: none; }
+    .owner-list-item .item-info { flex: 1; min-width: 0; }
+    .owner-list-item .item-name { font-weight: 700; }
+    .owner-list-item .item-meta { font-size: .8rem; color: var(--muted); margin-top: 2px; }
+    .owner-list-item .item-actions { display: flex; gap: 6px; }
+
+    /* Logs table — scrollable on small screens */
+    .log-table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    th { text-align: left; padding: 8px 10px; color: var(--muted); font-weight: 600; border-bottom: 2px solid var(--border); white-space: nowrap; }
+    td { padding: 10px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    .td-actions { display: flex; gap: 4px; white-space: nowrap; }
+
+    /* ── Filter bar ── */
+    .filter-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .filter-bar select { flex: 1; min-width: 120px; }
+
+    /* ── Add form row ── */
+    .add-row { padding: 14px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; flex-wrap: wrap; }
+    .add-row input, .add-row select { flex: 1; min-width: 120px; }
+
+    /* ── Modals ── */
+    .modal-bg {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      z-index: 200;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-bg.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius) var(--radius) 0 0;
+      padding: 24px 20px calc(24px + var(--safe-bot));
+      width: 100%;
+      max-width: 560px;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: slideUp .25s ease;
+    }
+    @media (min-width: 560px) {
+      .modal-bg { align-items: center; }
+      .modal { border-radius: var(--radius); max-height: 80vh; }
+    }
+    @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal h2 { font-size: 1.1rem; margin-bottom: 18px; }
+    .modal-footer { display: flex; gap: 10px; margin-top: 20px; }
+    .modal-footer .btn { flex: 1; }
+
+    /* ── Alerts ── */
+    .alert {
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: .9rem;
+      font-weight: 500;
+      margin-bottom: 12px;
+    }
+    .alert-red   { background: #fee2e2; color: #991b1b; }
+    .alert-amber { background: #fef3c7; color: #92400e; }
+
+    /* ── Spinner ── */
+    .spinner { text-align: center; padding: 32px; color: var(--muted); }
+    .empty   { text-align: center; padding: 32px; color: var(--muted); font-size: .9rem; }
+
+    /* ── Utility ── */
+    [hidden] { display: none !important; }
+    .text-right { text-align: right; }
+    .flex-end { display: flex; justify-content: flex-end; }
+    .mt8 { margin-top: 8px; }
+
+    /* ── Tier pill ── */
+    .tier { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+    .tier-bronze { background: #fde68a; color: #78350f; }
+    .tier-silver { background: #e2e8f0; color: #475569; }
+    .tier-gold   { background: #fef9c3; color: #854d0e; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="header-brand">
+      <!--
+        LOGO: Replace the <svg> below with an <img> tag once you have the PNG.
+        Example: <img src="data:image/png;base64,YOUR_BASE64_HERE" alt="MCN" class="header-logo">
+        The SVG below is a placeholder that matches the brand colours.
+      -->
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOEAAABpCAYAAADMUETPAAArIUlEQVR4nO2dB5hcVdnH35md3c1ueiWVrlKDAZQWQkc6QUU/yueDoCAgAiLSpITQiyAIQT+NEkG6SFGQJoJAQGqogiGUIJBC6mazbeZ7fu/Mf3L2MtuS3czs5r55bnbKnXvPPeft7STGbrN1xmKIIYaiQbJ4t44hhhiAmAhjiKHIEBNhDDEUGWIijCGGIkNMhDHEUGSIiTCGGIoMMRHGEEORISbCGGIoMsREGEMMRYaYCGOIocgQE2EMMRQZYiKMIYYiQ0yEMcRQZIiJMIYYigwxEcYQQ5EhJsIYYigyxEQYQwxFhpgIY4ihyBATYQwxFBliIowhhiJDTIQxxFBkSBV7ADF0DiQjPfPSiXhm24JEImGZTPGbDcZE2MmgRWWBYygM4dxkikQEpbQ+qdLh4Ons/2mzsrIyy2SyXCqTzFgymbR0Op19n1s0zgFKgZN1lMN2JgIwf8xNIxOXu3Z5ebmlkklrbGw0K2vZ4gjHqNdRiboywHiya7iCIfHa/yZXzI0+68p1ZCzcAxxiTA0NDf66lKRh0YmwGSTSVpbMWFP9MkegyqrelslAbElLpVJWV1eXXzRec06vXr2aTWopAGPU4tbX1+c/Y5wcfK6/qwpch7kRwolhLVu2zD9bvHhxs/uAiBUVFX4kUmX+vtn8ddKYampqfFzcp6mpKb9uTU1ZZqF7pnNE0hXAs4Ej3B/GBM5orkoJSmpECWuyxvqFtu6Y4ZZKJW3mrNmWqhzqXJ6JFDCRffv2da7GIi5cuNDfM+kgvRAx5MarE0QMEED//v3zRAlImuclw0qOTxIrYyt+P3/+fPvss8+surra+lT3tnXWWcc23XgTZ1QcAMTx6aef2n//+18/d+nSpT53gwcP9nMa04358TKXHUVaftO7d28bOHCgEwD3WmuttXytfNw5AmRNw3npCoDowBvGw5oMGDDA5s2b53POc/FdKTDwkiLCZCZty5Z8Znvt8U0bOKivnXPuJTagerCVWVb1ZCJBnm9961t22WWXWVki+/kJJ55gt956q62//vr+XgtbDFWDhYX4P/74Y9tmm23s9ttud0JhHL/5zW/s/PPPtzFjxuTPW1UAuWfPnu3X33LLLW2fffax8ePH28Zf2silUDJgCuH4kEdz5861J5/6p/31r3+1J554wmbNmmVrr722I62YWagytgcWLFhgv/3tb23cuHG+PqeceopNnTrVNtlkE1u+fLkjv8YTMqOugCVLltiECRNs6v9N9TWAwXzjG9+wd955xxlPOC/FhOKPIAKN9XW2eNF8W16zyJoa6i1paUs3NFpTfYP1Kq+wRDrj78sTZbZ0yWKzTNquuuJK69e7T/bzZJkfLC6TvLoBCVVmCatdWmPXXHW1pSxpSxYucoREYktCg3iSDm0B5+YRpimdvUdZmc2ZM8cJ59BDD7XnnnvO7r/vfjv+2ONsi83H+vnSHkLVj3nhvhAZUvrrEw+yX025wV577TW7+OKLrba21t58802/58poElwXCZQ0JGmdXXrxJbbll8fZh+9/YBWp8mbPwTwlu5AIeM7lNcscyWuX1VgqkVWTAe4LkyoFKDkiLEslrFdlhZWXJSxVxgCzKotUTBnYjU2N/h6Vr6K8wn7605/au+++66qYuH0xPGBVVVX2n//8x4455hgbNXKULVy8ME8MLLoYA+Nrj6rH8/J72Vb8BsJ46623bNttt3WCufyyy230qNG2eMkK+6+qV5WlylL2308+sZmzZtm/33nHPpg922pqay2ZSrmNpGsvXVbj4zr66KPt9ddft+OPP97efvttJ6aOQn6dEklXdRnvPffc49/xXtqJCDzThZoK9w61Da1DV9qh3VIdDeNZycCZ0dBQn/cRhPZT1KMHMi2tWWpHHXWU3XzzzfbJJ5+47u9u1ozZCkty9QAOkaFDh9rPfvYza0o3rfDIud8pa4vkHtafL9EGDoIwEGBjXb31qqx0FRJpdd1117laDixavMjVq359+9mMV2e4evnss8/a+++/70wKNVDEAZMYNGiQrbfeeq6q7bXXXrbBehtYU6bJbURU0QsnX2g777yzzynP0prapvWTjSom09CYlfLYYEOGDLE//elPtttuu9lGG22U1VLaevBVBOELhMezOa6kyv07Ocbce1wCUHKSkImpqEi5RENbE9cCefnLpIZqJq9BcqThpZde6kSoc5jo1c3xkMann366VVZWuk0SusSFFPzlOdszNhEt1/vggw+sT58+9tJLLzkBQoxcu1+/fi5tJuw0wXbccUe7/PLL7ZVXXvHv+g8aaGuNHGFDh6/lf3lfs7zWnn52up193rm2/Y7jbZ8D93ObcOjgoS5BFy1Z5ATz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" alt="MCN" class="header-logo">
+      <h1>MCN Hours</h1>
+    </div>
+    <div class="view-toggle">
+      <button class="view-btn active" id="btn-staff-view" onclick="switchView('staff')">Staff</button>
+      <button class="view-btn" id="btn-owner-view" onclick="switchView('owner')">Owner</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ══════════════ STAFF VIEW ══════════════ -->
+    <div id="staff-view">
+      <div id="staff-selector" class="card">
+        <label for="staff-select">Who are you?</label>
+        <select id="staff-select" onchange="onStaffSelected()">
+          <option value="">— Select your name —</option>
+        </select>
+      </div>
+
+      <div id="staff-content" hidden>
+        <div id="limit-alerts"></div>
+
+        <div class="card">
+          <div class="card-header">Clients</div>
+          <div id="client-list"><div class="spinner">Loading…</div></div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <div class="card-header">My entries this month</div>
+          <div id="recent-logs"><div class="spinner">Loading…</div></div>
+        </div>
+      </div>
+
+      <div id="staff-placeholder" style="text-align:center;padding:48px 16px;color:var(--muted)">
+        <p style="font-size:2rem">👆</p>
+        <p>Select your name above to get started.</p>
+      </div>
+    </div>
+
+    <!-- ══════════════ OWNER VIEW ══════════════ -->
+    <div id="owner-view" hidden>
+      <!-- PIN Gate -->
+      <div id="pin-gate">
+        <h2>Owner Access</h2>
+        <p>Enter your PIN to continue.</p>
+        <input id="pin-input" type="password" inputmode="numeric" maxlength="8" placeholder="••••"
+               onkeydown="if(event.key==='Enter') checkPin()">
+        <div id="pin-error"></div>
+        <button class="btn btn-primary" onclick="checkPin()">Unlock</button>
+      </div>
+
+      <!-- Owner Dashboard (shown after PIN) -->
+      <div id="owner-dashboard" hidden>
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="showOwnerTab('dashboard')">Dashboard</button>
+          <button class="tab-btn"        onclick="showOwnerTab('clients')">Clients</button>
+          <button class="tab-btn"        onclick="showOwnerTab('staff')">Staff</button>
+          <button class="tab-btn"        onclick="showOwnerTab('logs')">Logs</button>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="tab-dashboard">
+          <div class="card">
+            <div class="card-header" id="dashboard-month-label">This month</div>
+            <div id="dashboard-list"><div class="spinner">Loading…</div></div>
+          </div>
+        </div>
+
+        <!-- Clients Tab -->
+        <div id="tab-clients" hidden>
+          <div class="card">
+            <div class="card-header">Active Clients</div>
+            <div id="clients-list"><div class="spinner">Loading…</div></div>
+            <div class="add-row">
+              <input id="new-client-name" placeholder="Client name" type="text">
+              <select id="new-client-tier">
+                <option value="">Tier (optional)</option>
+                <option value="Bronze">Bronze</option>
+                <option value="Silver">Silver</option>
+                <option value="Gold">Gold</option>
+              </select>
+              <input id="new-client-hours" placeholder="Monthly hrs" type="number" min="0" step="1" style="max-width:130px">
+              <button class="btn btn-primary btn-sm" onclick="addClient()">+ Add</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Staff Tab -->
+        <div id="tab-staff" hidden>
+          <div class="card">
+            <div class="card-header">Active Staff</div>
+            <div id="staff-list-owner"><div class="spinner">Loading…</div></div>
+            <div class="add-row">
+              <input id="new-staff-name" placeholder="Staff name" type="text">
+              <button class="btn btn-primary btn-sm" onclick="addStaff()">+ Add</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logs Tab -->
+        <div id="tab-logs" hidden>
+          <div class="filter-bar">
+            <select id="log-filter-staff"  onchange="loadOwnerLogs()"><option value="">All Staff</option></select>
+            <select id="log-filter-client" onchange="loadOwnerLogs()"><option value="">All Clients</option></select>
+          </div>
+          <div class="card">
+            <div class="log-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Staff</th>
+                    <th>Client</th>
+                    <th>Date</th>
+                    <th>Duration</th>
+                    <th>Notes</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="logs-tbody"><tr><td colspan="6" class="spinner">Loading…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ══════════════ MODALS ══════════════ -->
+
+<!-- Edit Log Modal -->
+<div class="modal-bg" id="modal-edit-log">
+  <div class="modal">
+    <h2>Edit Entry</h2>
+    <input type="hidden" id="edit-log-id">
+    <div class="field">
+      <label>Start Time</label>
+      <input type="datetime-local" id="edit-start-time">
+    </div>
+    <div class="field">
+      <label>End Time</label>
+      <input type="datetime-local" id="edit-end-time">
+    </div>
+    <div class="field">
+      <label>Notes</label>
+      <textarea id="edit-notes" placeholder="Optional notes…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-edit-log')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditLog()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Client Modal -->
+<div class="modal-bg" id="modal-edit-client">
+  <div class="modal">
+    <h2>Edit Client</h2>
+    <input type="hidden" id="edit-client-id">
+    <div class="field">
+      <label>Client Name</label>
+      <input type="text" id="edit-client-name">
+    </div>
+    <div class="field">
+      <label>Tier</label>
+      <select id="edit-client-tier">
+        <option value="">None</option>
+        <option value="Bronze">Bronze</option>
+        <option value="Silver">Silver</option>
+        <option value="Gold">Gold</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Monthly Hours Allocation</label>
+      <input type="number" id="edit-client-hours" min="0" step="1">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-edit-client')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditClient()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-bg" id="modal-confirm">
+  <div class="modal">
+    <h2 id="confirm-title">Are you sure?</h2>
+    <p id="confirm-body" style="color:var(--muted);margin-bottom:0"></p>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-confirm')">Cancel</button>
+      <button class="btn btn-danger" id="confirm-ok">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// CONFIG — paste your deployed Apps Script URL here
+// ================================================================
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbycLumreGwpkxfZo480e4cmOZhHTOmvuamBsN9ivrYGN0oUd5mW9PUttsS983wf6rhiJQ/exec';
+
+// ================================================================
+// State
+// ================================================================
+const state = {
+  clients:      [],
+  staff:        [],
+  monthlyTotals: {},
+  currentStaff: null,
+  ownerAuthed:  false,
+  ownerTab:     'dashboard',
+  activeTimers: {},   // clientID -> { logID, startTime (ISO) }
+  intervals:    {},   // clientID -> intervalID
+};
+
+// ================================================================
+// API
+// ================================================================
+async function api(action, data = {}) {
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action, ...data }),
+    redirect: 'follow',
+  });
+  if (!res.ok) throw new Error('Network error ' + res.status);
+  return res.json();
+}
+
+// ================================================================
+// Persistence — active timers survive page refresh via localStorage
+// ================================================================
+function saveTimers() {
+  localStorage.setItem('activeTimers', JSON.stringify(state.activeTimers));
+}
+function loadTimers() {
+  try { state.activeTimers = JSON.parse(localStorage.getItem('activeTimers') || '{}'); }
+  catch { state.activeTimers = {}; }
+}
+
+// ================================================================
+// View switching
+// ================================================================
+function switchView(view) {
+  document.getElementById('staff-view').hidden = view !== 'staff';
+  document.getElementById('owner-view').hidden = view !== 'owner';
+  document.getElementById('btn-staff-view').classList.toggle('active', view === 'staff');
+  document.getElementById('btn-owner-view').classList.toggle('active', view === 'owner');
+
+  if (view === 'owner' && !state.ownerAuthed) {
+    document.getElementById('pin-gate').hidden = false;
+    document.getElementById('owner-dashboard').hidden = true;
+  }
+  if (view === 'owner' && state.ownerAuthed) {
+    refreshOwnerTab();
+  }
+}
+
+// ================================================================
+// Startup
+// ================================================================
+async function init() {
+  loadTimers();
+  const [cr, sr] = await Promise.all([api('getClients'), api('getStaff')]);
+  state.clients = cr.clients || [];
+  state.staff   = sr.staff   || [];
+
+  // Populate staff dropdown
+  const sel = document.getElementById('staff-select');
+  state.staff.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.staffID;
+    o.textContent = s.staffName;
+    sel.appendChild(o);
+  });
+}
+
+// ================================================================
+// Staff View
+// ================================================================
+async function onStaffSelected() {
+  const sel = document.getElementById('staff-select');
+  const sid = sel.value;
+  state.currentStaff = state.staff.find(s => s.staffID === sid) || null;
+
+  document.getElementById('staff-content').hidden    = !state.currentStaff;
+  document.getElementById('staff-placeholder').hidden = !!state.currentStaff;
+
+  if (!state.currentStaff) return;
+
+  const tr = await api('getMonthlyTotals');
+  state.monthlyTotals = tr.totals || {};
+
+  renderClientList();
+  loadRecentLogs();
+}
+
+function renderClientList() {
+  const el = document.getElementById('client-list');
+  const alerts = document.getElementById('limit-alerts');
+  alerts.innerHTML = '';
+
+  if (!state.clients.length) {
+    el.innerHTML = '<div class="empty">No clients yet.</div>';
+    return;
+  }
+
+  const rows = state.clients.map(c => {
+    const used  = state.monthlyTotals[c.clientID] || 0;
+    const alloc = c.monthlyHours || 0;
+    const pct   = alloc > 0 ? (used / alloc) * 100 : 0;
+    const atLimit = alloc > 0 && used >= alloc;
+
+    if (atLimit) {
+      alerts.insertAdjacentHTML('beforeend', `
+        <div class="alert alert-red">
+          ⛔ <strong>${esc(c.clientName)}</strong> has reached its monthly limit (${alloc} hrs).
+          Further time logged will not be billed.
+        </div>`);
+    }
+
+    const timer = state.activeTimers[c.clientID];
+    const isRunning = !!timer && timer.staffID === state.currentStaff.staffID;
+    const timerID = 'timer-' + c.clientID;
+
+    let badgeHTML = '';
+    if (alloc > 0) {
+      if (pct >= 100) badgeHTML = `<span class="limit-badge badge-red">⛔ Limit reached (${used.toFixed(1)}/${alloc} hrs)</span>`;
+      else if (pct >= 80) badgeHTML = `<span class="limit-badge badge-amber">⚠️ ${pct.toFixed(0)}% used (${used.toFixed(1)}/${alloc} hrs)</span>`;
+    }
+
+    return `
+      <div class="client-card" id="card-${c.clientID}">
+        <div class="client-info">
+          <div class="client-name">${esc(c.clientName)}${tierBadge(c.tier)}</div>
+          <div class="client-meta">${alloc > 0 ? used.toFixed(1) + ' / ' + alloc + ' hrs used' : 'No allocation set'}</div>
+          ${badgeHTML}
+        </div>
+        <div class="timer-display" id="${timerID}">${isRunning ? elapsed(timer.startTime) : ''}</div>
+        <button class="btn btn-sm timer-btn ${isRunning ? 'btn-danger' : 'btn-success'}"
+                id="tbtn-${c.clientID}"
+                onclick="${isRunning ? 'stopTimer' : 'startTimer'}('${c.clientID}')">
+          ${isRunning ? '■ Stop' : '▶ Start'}
+        </button>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = rows;
+
+  // Restart intervals for any running timers
+  state.clients.forEach(c => {
+    const timer = state.activeTimers[c.clientID];
+    if (timer && timer.staffID === state.currentStaff?.staffID) {
+      startInterval(c.clientID, timer.startTime);
+    }
+  });
+}
+
+async function startTimer(clientID) {
+  const client = state.clients.find(c => c.clientID === clientID);
+  const staff  = state.currentStaff;
+  if (!client || !staff) return;
+
+  const btn = document.getElementById('tbtn-' + clientID);
+  btn.disabled = true;
+  btn.textContent = '…';
+
+  const res = await api('startTimer', {
+    staffID: staff.staffID, staffName: staff.staffName,
+    clientID: client.clientID, clientName: client.clientName,
+  });
+
+  if (!res.success) { alert('Error: ' + res.error); btn.disabled = false; return; }
+
+  state.activeTimers[clientID] = { logID: res.logID, startTime: res.startTime, staffID: staff.staffID };
+  saveTimers();
+  startInterval(clientID, res.startTime);
+
+  btn.className = 'btn btn-sm timer-btn btn-danger';
+  btn.textContent = '■ Stop';
+  btn.onclick = () => stopTimer(clientID);
+  btn.disabled = false;
+}
+
+async function stopTimer(clientID) {
+  const timer = state.activeTimers[clientID];
+  if (!timer) return;
+
+  const btn = document.getElementById('tbtn-' + clientID);
+  btn.disabled = true;
+  btn.textContent = '…';
+
+  const res = await api('stopTimer', { logID: timer.logID });
+
+  clearInterval(state.intervals[clientID]);
+  delete state.intervals[clientID];
+  delete state.activeTimers[clientID];
+  saveTimers();
+
+  document.getElementById('timer-' + clientID).textContent = '';
+
+  if (res.success) {
+    await loadRecentLogs();
+    // Refresh totals
+    const tr = await api('getMonthlyTotals');
+    state.monthlyTotals = tr.totals || {};
+  } else {
+    alert('Error stopping timer: ' + res.error);
+  }
+
+  btn.className = 'btn btn-sm timer-btn btn-success';
+  btn.textContent = '▶ Start';
+  btn.onclick = () => startTimer(clientID);
+  btn.disabled = false;
+}
+
+function startInterval(clientID, startISO) {
+  clearInterval(state.intervals[clientID]);
+  state.intervals[clientID] = setInterval(() => {
+    const el = document.getElementById('timer-' + clientID);
+    if (el) el.textContent = elapsed(startISO);
+  }, 1000);
+}
+
+async function loadRecentLogs() {
+  const el = document.getElementById('recent-logs');
+  el.innerHTML = '<div class="spinner">Loading…</div>';
+  const res = await api('getLogsByStaff', { staffID: state.currentStaff.staffID });
+  const logs = (res.logs || []).sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+
+  if (!logs.length) { el.innerHTML = '<div class="empty">No entries this month.</div>'; return; }
+
+  el.innerHTML = logs.map(log => {
+    const open = !log.endTime;
+    const dur  = open ? '<span class="log-open">In progress</span>'
+                      : `<strong>${log.durationHours.toFixed(2)} hrs</strong>`;
+    const dateStr = log.startTime ? fmtDate(log.startTime) : '—';
+    return `
+      <div class="log-row">
+        <div class="log-info">
+          <div class="log-client">${esc(log.clientName)}</div>
+          <div class="log-time">${dateStr}${log.notes ? ' · ' + esc(log.notes) : ''}</div>
+          <div class="log-actions">
+            <button class="btn btn-outline btn-sm" onclick="openEditLog('${log.logID}','${esc(log.startTime)}','${esc(log.endTime||'')}','${esc(log.notes||'')}')">Edit</button>
+            <button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="confirmDeleteLog('${log.logID}')">Delete</button>
+          </div>
+        </div>
+        <div class="log-hours">${dur}</div>
+      </div>`;
+  }).join('');
+}
+
+// ================================================================
+// Owner View — PIN
+// ================================================================
+async function checkPin() {
+  const pin = document.getElementById('pin-input').value.trim();
+  const err = document.getElementById('pin-error');
+  err.textContent = '';
+  if (!pin) return;
+
+  const res = await api('verifyPin', { pin });
+  if (res.success) {
+    state.ownerAuthed = true;
+    document.getElementById('pin-gate').hidden = true;
+    document.getElementById('owner-dashboard').hidden = false;
+    populateOwnerFilters();
+    showOwnerTab('dashboard');
+  } else {
+    err.textContent = 'Incorrect PIN. Try again.';
+    document.getElementById('pin-input').value = '';
+  }
+}
+
+// ================================================================
+// Owner View — Tabs
+// ================================================================
+function showOwnerTab(tab) {
+  state.ownerTab = tab;
+  ['dashboard','clients','staff','logs'].forEach(t => {
+    document.getElementById('tab-' + t).hidden = t !== tab;
+    document.querySelectorAll('.tab-btn')[['dashboard','clients','staff','logs'].indexOf(t)]
+      .classList.toggle('active', t === tab);
+  });
+  refreshOwnerTab();
+}
+
+async function refreshOwnerTab() {
+  switch (state.ownerTab) {
+    case 'dashboard': loadDashboard();   break;
+    case 'clients':   loadOwnerClients(); break;
+    case 'staff':     loadOwnerStaff();   break;
+    case 'logs':      loadOwnerLogs();    break;
+  }
+}
+
+// ── Dashboard ──
+async function loadDashboard() {
+  const el = document.getElementById('dashboard-list');
+  el.innerHTML = '<div class="spinner">Loading…</div>';
+
+  const [cr, tr] = await Promise.all([api('getClients'), api('getMonthlyTotals')]);
+  const clients = cr.clients || [];
+  const totals  = tr.totals  || {};
+
+  const now = new Date();
+  document.getElementById('dashboard-month-label').textContent =
+    now.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+  if (!clients.length) { el.innerHTML = '<div class="empty">No clients.</div>'; return; }
+
+  el.innerHTML = clients.map(c => {
+    const used  = totals[c.clientID] || 0;
+    const alloc = c.monthlyHours || 0;
+    const pct   = alloc > 0 ? Math.min((used / alloc) * 100, 100) : 0;
+    const cls   = pct >= 100 ? 'fill-red' : pct >= 80 ? 'fill-amber' : 'fill-green';
+    const rem   = alloc > 0 ? Math.max(alloc - used, 0).toFixed(1) : '—';
+    return `
+      <div class="client-progress">
+        <div class="progress-header">
+          <span class="progress-name">${esc(c.clientName)}${tierBadge(c.tier)}</span>
+          <span class="progress-label">${used.toFixed(1)} / ${alloc} hrs</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill ${cls}" style="width:${pct.toFixed(1)}%"></div></div>
+        <div class="progress-footer">
+          <span>${pct.toFixed(0)}% used</span>
+          <span>${rem !== '—' ? rem + ' hrs remaining' : 'No allocation'}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Clients ──
+async function loadOwnerClients() {
+  const el = document.getElementById('clients-list');
+  el.innerHTML = '<div class="spinner">Loading…</div>';
+  const res = await api('getClients');
+  state.clients = res.clients || [];
+
+  if (!state.clients.length) { el.innerHTML = '<div class="empty">No clients yet.</div>'; return; }
+
+  el.innerHTML = state.clients.map(c => `
+    <div class="owner-list-item">
+      <div class="item-info">
+        <div class="item-name">${esc(c.clientName)} ${tierBadge(c.tier)}</div>
+        <div class="item-meta">${c.monthlyHours} hrs / month</div>
+      </div>
+      <div class="item-actions">
+        <button class="btn btn-outline btn-sm"
+          onclick="openEditClient('${c.clientID}','${esc(c.clientName)}','${esc(c.tier)}',${c.monthlyHours})">Edit</button>
+        <button class="btn btn-outline btn-sm" style="color:var(--red)"
+          onclick="confirmDeactivate('client','${c.clientID}','${esc(c.clientName)}')">Remove</button>
+      </div>
+    </div>`).join('');
+}
+
+async function addClient() {
+  const name  = document.getElementById('new-client-name').value.trim();
+  const tier  = document.getElementById('new-client-tier').value;
+  const hours = Number(document.getElementById('new-client-hours').value);
+  if (!name) { alert('Enter a client name.'); return; }
+  const res = await api('addClient', { clientName: name, tier, monthlyHours: hours });
+  if (res.success) {
+    document.getElementById('new-client-name').value  = '';
+    document.getElementById('new-client-hours').value = '';
+    document.getElementById('new-client-tier').value  = '';
+    loadOwnerClients();
+  } else { alert('Error: ' + res.error); }
+}
+
+function openEditClient(id, name, tier, hours) {
+  document.getElementById('edit-client-id').value    = id;
+  document.getElementById('edit-client-name').value  = name;
+  document.getElementById('edit-client-tier').value  = tier;
+  document.getElementById('edit-client-hours').value = hours;
+  openModal('modal-edit-client');
+}
+
+async function saveEditClient() {
+  const id    = document.getElementById('edit-client-id').value;
+  const name  = document.getElementById('edit-client-name').value.trim();
+  const tier  = document.getElementById('edit-client-tier').value;
+  const hours = Number(document.getElementById('edit-client-hours').value);
+  if (!name) { alert('Name required.'); return; }
+  const res = await api('editClient', { clientID: id, clientName: name, tier, monthlyHours: hours });
+  if (res.success) { closeModal('modal-edit-client'); loadOwnerClients(); }
+  else { alert('Error: ' + res.error); }
+}
+
+// ── Staff ──
+async function loadOwnerStaff() {
+  const el = document.getElementById('staff-list-owner');
+  el.innerHTML = '<div class="spinner">Loading…</div>';
+  const res = await api('getStaff');
+  state.staff = res.staff || [];
+
+  if (!state.staff.length) { el.innerHTML = '<div class="empty">No staff yet.</div>'; return; }
+
+  el.innerHTML = state.staff.map(s => `
+    <div class="owner-list-item">
+      <div class="item-info">
+        <div class="item-name">${esc(s.staffName)}</div>
+      </div>
+      <div class="item-actions">
+        <button class="btn btn-outline btn-sm" style="color:var(--red)"
+          onclick="confirmDeactivate('staff','${s.staffID}','${esc(s.staffName)}')">Remove</button>
+      </div>
+    </div>`).join('');
+}
+
+async function addStaff() {
+  const name = document.getElementById('new-staff-name').value.trim();
+  if (!name) { alert('Enter a staff name.'); return; }
+  const res = await api('addStaff', { staffName: name });
+  if (res.success) { document.getElementById('new-staff-name').value = ''; loadOwnerStaff(); }
+  else { alert('Error: ' + res.error); }
+}
+
+// ── Logs ──
+function populateOwnerFilters() {
+  const sf = document.getElementById('log-filter-staff');
+  const cf = document.getElementById('log-filter-client');
+  state.staff.forEach(s => {
+    const o = document.createElement('option'); o.value = s.staffID; o.textContent = s.staffName; sf.appendChild(o);
+  });
+  state.clients.forEach(c => {
+    const o = document.createElement('option'); o.value = c.clientID; o.textContent = c.clientName; cf.appendChild(o);
+  });
+}
+
+async function loadOwnerLogs() {
+  const tb  = document.getElementById('logs-tbody');
+  const sid = document.getElementById('log-filter-staff').value;
+  const cid = document.getElementById('log-filter-client').value;
+  tb.innerHTML = '<tr><td colspan="6" class="spinner">Loading…</td></tr>';
+
+  const res = await api('getAllLogs', { staffID: sid || undefined, clientID: cid || undefined });
+  const logs = (res.logs || []).sort((a,b) => new Date(b.startTime) - new Date(a.startTime));
+
+  if (!logs.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">No entries found.</td></tr>'; return; }
+
+  tb.innerHTML = logs.map(log => {
+    const dur = log.endTime
+      ? (typeof log.durationHours === 'number' ? log.durationHours.toFixed(2) + ' hrs' : '—')
+      : '<span class="log-open">In progress</span>';
+    return `
+      <tr>
+        <td>${esc(log.staffName)}</td>
+        <td>${esc(log.clientName)}</td>
+        <td>${log.startTime ? fmtDate(log.startTime) : '—'}</td>
+        <td>${dur}</td>
+        <td>${esc(log.notes || '')}</td>
+        <td class="td-actions">
+          <button class="btn btn-outline btn-sm"
+            onclick="openEditLog('${log.logID}','${esc(log.startTime)}','${esc(log.endTime||'')}','${esc(log.notes||'')}')">Edit</button>
+          <button class="btn btn-outline btn-sm" style="color:var(--red)"
+            onclick="confirmDeleteLog('${log.logID}')">Del</button>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+// ================================================================
+// Edit Log Modal
+// ================================================================
+function openEditLog(logID, startISO, endISO, notes) {
+  document.getElementById('edit-log-id').value = logID;
+  document.getElementById('edit-start-time').value = isoToLocal(startISO);
+  document.getElementById('edit-end-time').value   = endISO ? isoToLocal(endISO) : '';
+  document.getElementById('edit-notes').value       = notes;
+  openModal('modal-edit-log');
+}
+
+async function saveEditLog() {
+  const logID = document.getElementById('edit-log-id').value;
+  const start = localToISO(document.getElementById('edit-start-time').value);
+  const end   = localToISO(document.getElementById('edit-end-time').value);
+  const notes = document.getElementById('edit-notes').value.trim();
+  if (!start || !end) { alert('Both start and end times are required.'); return; }
+  if (new Date(end) <= new Date(start)) { alert('End time must be after start time.'); return; }
+  const res = await api('editLog', { logID, startTime: start, endTime: end, notes });
+  if (res.success) {
+    closeModal('modal-edit-log');
+    if (state.ownerAuthed && state.ownerTab === 'logs') loadOwnerLogs();
+    else if (state.currentStaff) loadRecentLogs();
+  } else { alert('Error: ' + res.error); }
+}
+
+// ================================================================
+// Confirm / Delete
+// ================================================================
+function confirmDeleteLog(logID) {
+  confirm2('Delete entry?', 'This cannot be undone.', async () => {
+    const res = await api('deleteLog', { logID });
+    if (res.success) {
+      if (state.ownerAuthed && state.ownerTab === 'logs') loadOwnerLogs();
+      else if (state.currentStaff) loadRecentLogs();
+    } else { alert('Error: ' + res.error); }
+  });
+}
+
+function confirmDeactivate(type, id, name) {
+  confirm2(`Remove ${name}?`, `This will deactivate them. Existing log entries are kept.`, async () => {
+    const action = type === 'client' ? 'deactivateClient' : 'deactivateStaff';
+    const idKey  = type === 'client' ? 'clientID' : 'staffID';
+    const res = await api(action, { [idKey]: id });
+    if (res.success) {
+      if (type === 'client') loadOwnerClients();
+      else loadOwnerStaff();
+    } else { alert('Error: ' + res.error); }
+  });
+}
+
+function confirm2(title, body, onOk) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-body').textContent  = body;
+  const btn = document.getElementById('confirm-ok');
+  btn.onclick = () => { closeModal('modal-confirm'); onOk(); };
+  openModal('modal-confirm');
+}
+
+// ================================================================
+// Modal helpers
+// ================================================================
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// Close modal on backdrop click
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => { if (e.target === bg) closeModal(bg.id); });
+});
+
+// ================================================================
+// Utilities
+// ================================================================
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function elapsed(startISO) {
+  const s = Math.floor((Date.now() - new Date(startISO).getTime()) / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return `${h}:${pad(m)}:${pad(sec)}`;
+}
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ' ' +
+         d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+function isoToLocal(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function localToISO(local) {
+  if (!local) return '';
+  return new Date(local).toISOString();
+}
+
+function tierBadge(tier) {
+  if (!tier) return '';
+  const cls = { Bronze: 'tier-bronze', Silver: 'tier-silver', Gold: 'tier-gold' }[tier] || '';
+  return ` <span class="tier ${cls}">${tier}</span>`;
+}
+
+// ================================================================
+// Boot
+// ================================================================
+init().catch(err => {
+  console.error(err);
+  document.querySelector('main').insertAdjacentHTML('afterbegin',
+    `<div class="alert alert-red">⚠️ Could not connect to backend. Check GAS_URL in this file.<br><small>${err.message}</small></div>`);
+});
+</script>
+</body>
+</html>
