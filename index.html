@@ -335,6 +335,21 @@
     .flex-end { display: flex; justify-content: flex-end; }
     .mt8 { margin-top: 8px; }
 
+    /* ── Task input in client card ── */
+    .task-label { display: block; font-size: .75rem; font-weight: 600; color: var(--muted); margin: 8px 0 4px; text-transform: uppercase; letter-spacing: .4px; }
+    .task-input {
+      width: 100%; padding: 7px 10px; font-size: .85rem; min-height: 36px;
+      border: 1.5px solid var(--border); border-radius: 6px;
+      font-family: inherit; background: var(--bg); color: var(--text);
+      transition: border-color .2s;
+    }
+    .task-input:focus {
+      outline: none; border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(201,168,76,.15); background: var(--surface);
+    }
+    .client-task-running { font-size: .82rem; color: var(--primary); font-weight: 600; margin-top: 5px; }
+    .log-task { font-size: .82rem; color: var(--text); font-weight: 600; margin-top: 2px; }
+
     /* ── Tier pill ── */
     .tier { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
     .tier-bronze { background: #fde68a; color: #78350f; }
@@ -455,6 +470,7 @@
           <div class="filter-bar">
             <select id="log-filter-staff"  onchange="loadOwnerLogs()"><option value="">All Staff</option></select>
             <select id="log-filter-client" onchange="loadOwnerLogs()"><option value="">All Clients</option></select>
+            <input id="log-filter-task" type="text" placeholder="Search task…" oninput="loadOwnerLogs()" style="flex:1;min-width:120px">
           </div>
           <div class="card">
             <div class="log-table-wrap">
@@ -463,6 +479,7 @@
                   <tr>
                     <th>Staff</th>
                     <th>Client</th>
+                    <th>Task</th>
                     <th>Date</th>
                     <th>Duration</th>
                     <th>Notes</th>
@@ -493,6 +510,10 @@
     <div class="field">
       <label>End Time</label>
       <input type="datetime-local" id="edit-end-time">
+    </div>
+    <div class="field">
+      <label>Task</label>
+      <input type="text" id="edit-task" placeholder="What were you working on?">
     </div>
     <div class="field">
       <label>Notes</label>
@@ -681,16 +702,25 @@ function renderClientList() {
       else if (pct >= 80) badgeHTML = `<span class="limit-badge badge-amber">⚠️ ${pct.toFixed(0)}% used (${used.toFixed(1)}/${alloc} hrs)</span>`;
     }
 
+    const taskArea = isRunning
+      ? `<div class="client-task-running">📋 ${esc(timer.task || '')}</div>`
+      : `<label class="task-label" for="task-${c.clientID}">Task</label>
+         <input class="task-input" id="task-${c.clientID}" type="text"
+                placeholder="What are you working on?"
+                oninput="onTaskInput('${c.clientID}')" autocomplete="off">`;
+
     return `
       <div class="client-card" id="card-${c.clientID}">
         <div class="client-info">
           <div class="client-name">${esc(c.clientName)}${tierBadge(c.tier)}</div>
           <div class="client-meta">${alloc > 0 ? used.toFixed(1) + ' / ' + alloc + ' hrs used' : 'No allocation set'}</div>
           ${badgeHTML}
+          ${taskArea}
         </div>
         <div class="timer-display" id="${timerID}">${isRunning ? elapsed(timer.startTime) : ''}</div>
         <button class="btn btn-sm timer-btn ${isRunning ? 'btn-danger' : 'btn-success'}"
                 id="tbtn-${c.clientID}"
+                ${isRunning ? '' : 'disabled'}
                 onclick="${isRunning ? 'stopTimer' : 'startTimer'}('${c.clientID}')">
           ${isRunning ? '■ Stop' : '▶ Start'}
         </button>
@@ -708,10 +738,19 @@ function renderClientList() {
   });
 }
 
+function onTaskInput(clientID) {
+  const val = (document.getElementById('task-' + clientID)?.value || '').trim();
+  const btn = document.getElementById('tbtn-' + clientID);
+  if (btn) btn.disabled = !val;
+}
+
 async function startTimer(clientID) {
   const client = state.clients.find(c => c.clientID === clientID);
   const staff  = state.currentStaff;
   if (!client || !staff) return;
+
+  const task = (document.getElementById('task-' + clientID)?.value || '').trim();
+  if (!task) return;
 
   const btn = document.getElementById('tbtn-' + clientID);
   btn.disabled = true;
@@ -720,18 +759,14 @@ async function startTimer(clientID) {
   const res = await api('startTimer', {
     staffID: staff.staffID, staffName: staff.staffName,
     clientID: client.clientID, clientName: client.clientName,
+    task,
   });
 
   if (!res.success) { alert('Error: ' + res.error); btn.disabled = false; return; }
 
-  state.activeTimers[clientID] = { logID: res.logID, startTime: res.startTime, staffID: staff.staffID };
+  state.activeTimers[clientID] = { logID: res.logID, startTime: res.startTime, staffID: staff.staffID, task };
   saveTimers();
-  startInterval(clientID, res.startTime);
-
-  btn.className = 'btn btn-sm timer-btn btn-danger';
-  btn.textContent = '■ Stop';
-  btn.onclick = () => stopTimer(clientID);
-  btn.disabled = false;
+  renderClientList();
 }
 
 async function stopTimer(clientID) {
@@ -749,21 +784,15 @@ async function stopTimer(clientID) {
   delete state.activeTimers[clientID];
   saveTimers();
 
-  document.getElementById('timer-' + clientID).textContent = '';
-
   if (res.success) {
-    await loadRecentLogs();
-    // Refresh totals
     const tr = await api('getMonthlyTotals');
     state.monthlyTotals = tr.totals || {};
+    renderClientList();
+    loadRecentLogs();
   } else {
     alert('Error stopping timer: ' + res.error);
+    btn.disabled = false;
   }
-
-  btn.className = 'btn btn-sm timer-btn btn-success';
-  btn.textContent = '▶ Start';
-  btn.onclick = () => startTimer(clientID);
-  btn.disabled = false;
 }
 
 function startInterval(clientID, startISO) {
@@ -791,9 +820,10 @@ async function loadRecentLogs() {
       <div class="log-row">
         <div class="log-info">
           <div class="log-client">${esc(log.clientName)}</div>
+          ${log.task ? `<div class="log-task">${esc(log.task)}</div>` : ''}
           <div class="log-time">${dateStr}${log.notes ? ' · ' + esc(log.notes) : ''}</div>
           <div class="log-actions">
-            <button class="btn btn-outline btn-sm" onclick="openEditLog('${log.logID}','${esc(log.startTime)}','${esc(log.endTime||'')}','${esc(log.notes||'')}')">Edit</button>
+            <button class="btn btn-outline btn-sm" onclick="openEditLog('${log.logID}','${esc(log.startTime)}','${esc(log.endTime||'')}','${esc(log.task||'')}','${esc(log.notes||'')}')">Edit</button>
             <button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="confirmDeleteLog('${log.logID}')">Delete</button>
           </div>
         </div>
@@ -981,15 +1011,20 @@ function populateOwnerFilters() {
 }
 
 async function loadOwnerLogs() {
-  const tb  = document.getElementById('logs-tbody');
-  const sid = document.getElementById('log-filter-staff').value;
-  const cid = document.getElementById('log-filter-client').value;
-  tb.innerHTML = '<tr><td colspan="6" class="spinner">Loading…</td></tr>';
+  const tb         = document.getElementById('logs-tbody');
+  const sid        = document.getElementById('log-filter-staff').value;
+  const cid        = document.getElementById('log-filter-client').value;
+  const taskFilter = (document.getElementById('log-filter-task')?.value || '').trim().toLowerCase();
+  tb.innerHTML = '<tr><td colspan="7" class="spinner">Loading…</td></tr>';
 
   const res = await api('getAllLogs', { staffID: sid || undefined, clientID: cid || undefined });
-  const logs = (res.logs || []).sort((a,b) => new Date(b.startTime) - new Date(a.startTime));
+  let logs = (res.logs || []).sort((a,b) => new Date(b.startTime) - new Date(a.startTime));
 
-  if (!logs.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">No entries found.</td></tr>'; return; }
+  if (taskFilter) {
+    logs = logs.filter(l => (l.task || '').toLowerCase().includes(taskFilter));
+  }
+
+  if (!logs.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">No entries found.</td></tr>'; return; }
 
   tb.innerHTML = logs.map(log => {
     const dur = log.endTime
@@ -999,12 +1034,13 @@ async function loadOwnerLogs() {
       <tr>
         <td>${esc(log.staffName)}</td>
         <td>${esc(log.clientName)}</td>
+        <td>${esc(log.task || '')}</td>
         <td>${log.startTime ? fmtDate(log.startTime) : '—'}</td>
         <td>${dur}</td>
         <td>${esc(log.notes || '')}</td>
         <td class="td-actions">
           <button class="btn btn-outline btn-sm"
-            onclick="openEditLog('${log.logID}','${esc(log.startTime)}','${esc(log.endTime||'')}','${esc(log.notes||'')}')">Edit</button>
+            onclick="openEditLog('${log.logID}','${esc(log.startTime)}','${esc(log.endTime||'')}','${esc(log.task||'')}','${esc(log.notes||'')}')">Edit</button>
           <button class="btn btn-outline btn-sm" style="color:var(--red)"
             onclick="confirmDeleteLog('${log.logID}')">Del</button>
         </td>
@@ -1015,11 +1051,12 @@ async function loadOwnerLogs() {
 // ================================================================
 // Edit Log Modal
 // ================================================================
-function openEditLog(logID, startISO, endISO, notes) {
-  document.getElementById('edit-log-id').value = logID;
-  document.getElementById('edit-start-time').value = isoToLocal(startISO);
-  document.getElementById('edit-end-time').value   = endISO ? isoToLocal(endISO) : '';
-  document.getElementById('edit-notes').value       = notes;
+function openEditLog(logID, startISO, endISO, task, notes) {
+  document.getElementById('edit-log-id').value      = logID;
+  document.getElementById('edit-start-time').value  = isoToLocal(startISO);
+  document.getElementById('edit-end-time').value    = endISO ? isoToLocal(endISO) : '';
+  document.getElementById('edit-task').value         = task || '';
+  document.getElementById('edit-notes').value        = notes || '';
   openModal('modal-edit-log');
 }
 
@@ -1027,10 +1064,11 @@ async function saveEditLog() {
   const logID = document.getElementById('edit-log-id').value;
   const start = localToISO(document.getElementById('edit-start-time').value);
   const end   = localToISO(document.getElementById('edit-end-time').value);
+  const task  = document.getElementById('edit-task').value.trim();
   const notes = document.getElementById('edit-notes').value.trim();
   if (!start || !end) { alert('Both start and end times are required.'); return; }
   if (new Date(end) <= new Date(start)) { alert('End time must be after start time.'); return; }
-  const res = await api('editLog', { logID, startTime: start, endTime: end, notes });
+  const res = await api('editLog', { logID, startTime: start, endTime: end, task, notes });
   if (res.success) {
     closeModal('modal-edit-log');
     if (state.ownerAuthed && state.ownerTab === 'logs') loadOwnerLogs();
