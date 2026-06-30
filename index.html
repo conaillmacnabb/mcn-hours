@@ -335,6 +335,34 @@
     .flex-end { display: flex; justify-content: flex-end; }
     .mt8 { margin-top: 8px; }
 
+    /* ── Toast notification ── */
+    #toast-container {
+      position: fixed; bottom: calc(20px + var(--safe-bot)); left: 50%;
+      transform: translateX(-50%); z-index: 400; pointer-events: none;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+    }
+    .toast {
+      padding: 11px 20px; border-radius: 8px; font-size: .88rem; font-weight: 500;
+      box-shadow: 0 4px 16px rgba(0,0,0,.25); white-space: nowrap;
+      animation: fadeInUp .2s ease; pointer-events: none;
+    }
+    .toast-error { background: #1a1a1a; color: #fff; }
+    .toast-info  { background: var(--header-bg); color: #fff; }
+    @keyframes fadeInUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ── Refresh button ── */
+    .selector-label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .selector-label-row label { font-weight: 700; font-size: .9rem; margin-bottom: 0; }
+    .btn-refresh {
+      background: none; border: none; color: var(--muted); font-size: 1.1rem;
+      cursor: pointer; padding: 2px 6px; border-radius: 4px;
+      transition: color .2s, transform .2s; line-height: 1;
+    }
+    .btn-refresh:hover { color: var(--primary); }
+    .btn-refresh.spinning { animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .load-error { color: var(--red); font-size: .85rem; margin-top: 8px; }
+
     /* ── Task input in client card ── */
     .task-label { display: block; font-size: .75rem; font-weight: 600; color: var(--muted); margin: 8px 0 4px; text-transform: uppercase; letter-spacing: .4px; }
     .task-input {
@@ -379,10 +407,14 @@
     <!-- ══════════════ STAFF VIEW ══════════════ -->
     <div id="staff-view">
       <div id="staff-selector" class="card">
-        <label for="staff-select">Who are you?</label>
-        <select id="staff-select" onchange="onStaffSelected()">
-          <option value="">— Select your name —</option>
+        <div class="selector-label-row">
+          <label for="staff-select">Who are you?</label>
+          <button id="refresh-btn" class="btn-refresh" onclick="refreshData()" title="Refresh staff &amp; client list" aria-label="Refresh">↻</button>
+        </div>
+        <select id="staff-select" onchange="onStaffSelected()" disabled>
+          <option value="">Loading…</option>
         </select>
+        <div id="staff-load-error" class="load-error" hidden></div>
       </div>
 
       <div id="staff-content" hidden>
@@ -555,6 +587,8 @@
   </div>
 </div>
 
+<div id="toast-container" aria-live="polite"></div>
+
 <!-- Confirm Modal -->
 <div class="modal-bg" id="modal-confirm">
   <div class="modal">
@@ -588,16 +622,33 @@ const state = {
 };
 
 // ================================================================
-// API
+// API — 10 s timeout on every call
 // ================================================================
 async function api(action, data = {}) {
-  const res = await fetch(GAS_URL, {
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Connection slow — please try again')), 10000)
+  );
+  const request = fetch(GAS_URL, {
     method: 'POST',
     body: JSON.stringify({ action, ...data }),
     redirect: 'follow',
+  }).then(res => {
+    if (!res.ok) throw new Error('Network error ' + res.status);
+    return res.json();
   });
-  if (!res.ok) throw new Error('Network error ' + res.status);
-  return res.json();
+  return Promise.race([request, timeout]);
+}
+
+// ================================================================
+// Toast
+// ================================================================
+function showToast(msg, isError = true) {
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = 'toast ' + (isError ? 'toast-error' : 'toast-info');
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 4000);
 }
 
 // ================================================================
@@ -630,22 +681,69 @@ function switchView(view) {
 }
 
 // ================================================================
-// Startup
+// Startup — fetch staff & clients once; show loading / error states
 // ================================================================
 async function init() {
   loadTimers();
-  const [cr, sr] = await Promise.all([api('getClients'), api('getStaff')]);
-  state.clients = cr.clients || [];
-  state.staff   = sr.staff   || [];
 
-  // Populate staff dropdown
+  const sel      = document.getElementById('staff-select');
+  const errEl    = document.getElementById('staff-load-error');
+  const refreshBtn = document.getElementById('refresh-btn');
+
+  sel.disabled = true;
+  sel.innerHTML = '<option>Loading…</option>';
+  errEl.hidden  = true;
+  refreshBtn.classList.add('spinning');
+
+  try {
+    const [cr, sr] = await Promise.all([api('getClients'), api('getStaff')]);
+    state.clients = cr.clients || [];
+    state.staff   = sr.staff   || [];
+    populateStaffDropdown();
+  } catch (err) {
+    console.error(err);
+    sel.innerHTML = '<option value="">— Could not load —</option>';
+    errEl.hidden  = false;
+    errEl.innerHTML = `${err.message}. <button class="btn btn-outline btn-sm" style="margin-left:8px" onclick="init()">Retry</button>`;
+  } finally {
+    refreshBtn.classList.remove('spinning');
+  }
+}
+
+// Populate (or repopulate) the staff dropdown from cached state.staff
+function populateStaffDropdown() {
   const sel = document.getElementById('staff-select');
+  const prev = sel.value; // preserve selection across refreshes
+  sel.disabled = false;
+  sel.innerHTML = '<option value="">— Select your name —</option>';
   state.staff.forEach(s => {
     const o = document.createElement('option');
     o.value = s.staffID;
     o.textContent = s.staffName;
     sel.appendChild(o);
   });
+  if (prev && state.staff.find(s => s.staffID === prev)) sel.value = prev;
+  document.getElementById('staff-load-error').hidden = true;
+}
+
+// Manual refresh — re-fetch staff & clients without resetting the staff selection
+async function refreshData() {
+  const btn = document.getElementById('refresh-btn');
+  if (btn.classList.contains('spinning')) return;
+  btn.classList.add('spinning');
+  try {
+    const [cr, sr] = await Promise.all([api('getClients'), api('getStaff')]);
+    state.clients = cr.clients || [];
+    state.staff   = sr.staff   || [];
+    populateStaffDropdown();
+    // If a staff member was already selected, refresh their client list too
+    if (state.currentStaff) renderClientList();
+    showToast('List updated', false);
+  } catch (err) {
+    showToast(err.message);
+  } finally {
+    btn.classList.remove('spinning');
+  }
 }
 
 // ================================================================
@@ -702,12 +800,21 @@ function renderClientList() {
       else if (pct >= 80) badgeHTML = `<span class="limit-badge badge-amber">⚠️ ${pct.toFixed(0)}% used (${used.toFixed(1)}/${alloc} hrs)</span>`;
     }
 
+    const isPending  = isRunning && !!timer.pending;   // startTimer in flight
+    const isStopping = isRunning && !!timer.stopping;  // stopTimer in flight
+
     const taskArea = isRunning
       ? `<div class="client-task-running">📋 ${esc(timer.task || '')}</div>`
       : `<label class="task-label" for="task-${c.clientID}">Task</label>
          <input class="task-input" id="task-${c.clientID}" type="text"
                 placeholder="What are you working on?"
                 oninput="onTaskInput('${c.clientID}')" autocomplete="off">`;
+
+    let btnText, btnCls, btnDisabled, btnClick;
+    if (isStopping)       { btnText = 'Stopping…'; btnCls = 'btn-outline'; btnDisabled = 'disabled'; btnClick = ''; }
+    else if (isPending)   { btnText = 'Starting…'; btnCls = 'btn-outline'; btnDisabled = 'disabled'; btnClick = ''; }
+    else if (isRunning)   { btnText = '■ Stop';    btnCls = 'btn-danger';  btnDisabled = '';         btnClick = `stopTimer('${c.clientID}')`; }
+    else                  { btnText = '▶ Start';   btnCls = 'btn-success'; btnDisabled = 'disabled'; btnClick = `startTimer('${c.clientID}')`; }
 
     return `
       <div class="client-card" id="card-${c.clientID}">
@@ -718,11 +825,9 @@ function renderClientList() {
           ${taskArea}
         </div>
         <div class="timer-display" id="${timerID}">${isRunning ? elapsed(timer.startTime) : ''}</div>
-        <button class="btn btn-sm timer-btn ${isRunning ? 'btn-danger' : 'btn-success'}"
-                id="tbtn-${c.clientID}"
-                ${isRunning ? '' : 'disabled'}
-                onclick="${isRunning ? 'stopTimer' : 'startTimer'}('${c.clientID}')">
-          ${isRunning ? '■ Stop' : '▶ Start'}
+        <button class="btn btn-sm timer-btn ${btnCls}" id="tbtn-${c.clientID}"
+                ${btnDisabled} ${btnClick ? `onclick="${btnClick}"` : ''}>
+          ${btnText}
         </button>
       </div>`;
   }).join('');
@@ -752,46 +857,61 @@ async function startTimer(clientID) {
   const task = (document.getElementById('task-' + clientID)?.value || '').trim();
   if (!task) return;
 
-  const btn = document.getElementById('tbtn-' + clientID);
-  btn.disabled = true;
-  btn.textContent = '…';
-
-  const res = await api('startTimer', {
-    staffID: staff.staffID, staffName: staff.staffName,
-    clientID: client.clientID, clientName: client.clientName,
-    task,
-  });
-
-  if (!res.success) { alert('Error: ' + res.error); btn.disabled = false; return; }
-
-  state.activeTimers[clientID] = { logID: res.logID, startTime: res.startTime, staffID: staff.staffID, task };
-  saveTimers();
+  // Optimistic UI: add pending timer immediately
+  const optimisticStart = new Date().toISOString();
+  state.activeTimers[clientID] = {
+    logID: '__pending__', startTime: optimisticStart,
+    staffID: staff.staffID, task, pending: true,
+  };
   renderClientList();
+
+  try {
+    const res = await api('startTimer', {
+      staffID: staff.staffID, staffName: staff.staffName,
+      clientID: client.clientID, clientName: client.clientName,
+      task,
+    });
+    if (!res.success) throw new Error(res.error || 'Start failed');
+    // Confirm with real logID / startTime from server
+    state.activeTimers[clientID] = { logID: res.logID, startTime: res.startTime, staffID: staff.staffID, task };
+    saveTimers();
+    renderClientList();
+  } catch (err) {
+    // Rollback
+    delete state.activeTimers[clientID];
+    saveTimers();
+    renderClientList();
+    showToast('Could not start timer — ' + err.message);
+  }
 }
 
 async function stopTimer(clientID) {
   const timer = state.activeTimers[clientID];
-  if (!timer) return;
+  if (!timer || timer.pending) return;
 
-  const btn = document.getElementById('tbtn-' + clientID);
-  btn.disabled = true;
-  btn.textContent = '…';
+  // Optimistic UI: mark as stopping immediately
+  const savedTimer = { ...timer };
+  state.activeTimers[clientID] = { ...timer, stopping: true };
+  renderClientList();
 
-  const res = await api('stopTimer', { logID: timer.logID });
+  try {
+    const res = await api('stopTimer', { logID: timer.logID });
+    if (!res.success) throw new Error(res.error || 'Stop failed');
 
-  clearInterval(state.intervals[clientID]);
-  delete state.intervals[clientID];
-  delete state.activeTimers[clientID];
-  saveTimers();
+    clearInterval(state.intervals[clientID]);
+    delete state.intervals[clientID];
+    delete state.activeTimers[clientID];
+    saveTimers();
 
-  if (res.success) {
     const tr = await api('getMonthlyTotals');
     state.monthlyTotals = tr.totals || {};
     renderClientList();
     loadRecentLogs();
-  } else {
-    alert('Error stopping timer: ' + res.error);
-    btn.disabled = false;
+  } catch (err) {
+    // Rollback
+    state.activeTimers[clientID] = savedTimer;
+    renderClientList();
+    showToast('Could not stop timer — ' + err.message);
   }
 }
 
@@ -881,8 +1001,8 @@ async function loadDashboard() {
   const el = document.getElementById('dashboard-list');
   el.innerHTML = '<div class="spinner">Loading…</div>';
 
-  const [cr, tr] = await Promise.all([api('getClients'), api('getMonthlyTotals')]);
-  const clients = cr.clients || [];
+  const tr = await api('getMonthlyTotals');
+  const clients = state.clients;
   const totals  = tr.totals  || {};
 
   const now = new Date();
